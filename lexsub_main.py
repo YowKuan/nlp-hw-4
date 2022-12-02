@@ -161,7 +161,7 @@ class BertPredictor(object):
         
         return None # replace for part 5
     
-class AllPredictor(object):
+class PredictorPartSix(object):
     
     def __init__(self, predictor=None, predictor_bert=None): 
         
@@ -183,6 +183,7 @@ class AllPredictor(object):
         result[prediction4]+=1
         
         return result.most_common(1)[0][0]
+    
     def predict2(self, context : Context) -> str:
         candidates = get_candidates(context.lemma, context.pos)
         result = dict()
@@ -228,14 +229,22 @@ if __name__=="__main__":
     predictor = Word2VecSubst(W2VMODEL_FILENAME)
     
     predictor_bert = BertPredictor()
-    all_predictor = AllPredictor(predictor, predictor_bert)
+    predictor_part_six = PredictorPartSix(predictor, predictor_bert)
 
     for context in read_lexsub_xml(sys.argv[1]):
         #print(context)  # useful for debugging
         #prediction = wn_simple_lesk_predictor(context) 
         #prediction = predictor.predict_nearest(context)
         #prediction = predictor_bert.predict(context)
-        prediction = all_predictor.predict2(context)
+        
+        
+        #Runs the best predictor part6
+        #In this part I tried 2 methods. 
+        #First method (predict) is kind of an ensemble method, in which I combined predictions from all previous 4 methods, and use voting to determine the final output.
+        #In the second method (predict2), I tried combining the output similarity in the word-to-vec model and the output probability bert model for each of the candidate word.
+        #Both of the above methods improves over all previous methods in smurf.predict. 
+        prediction = predictor_part_six.predict(context)
+        #prediction = predictor_part_six.predict2(context)
         
         
         print("{}.{} {} :: {}".format(context.lemma, context.pos, context.cid, prediction))
