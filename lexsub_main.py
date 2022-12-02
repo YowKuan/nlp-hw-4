@@ -131,7 +131,6 @@ class Word2VecSubst(object):
                 
                 max_similarity = similarity
                 result = candidate
-        print(max_s)
         return result # replace for part 4
 
 
