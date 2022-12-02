@@ -128,8 +128,10 @@ class Word2VecSubst(object):
             except KeyError:
                 continue
             if similarity > max_similarity:
+                
                 max_similarity = similarity
                 result = candidate
+        print(max_s)
         return result # replace for part 4
 
 
@@ -148,7 +150,7 @@ class BertPredictor(object):
         decoded = self.tokenizer.convert_ids_to_tokens(input_toks)
         mask_index = decoded.index('[MASK]')
         input_mat = np.array(input_toks).reshape((1,-1))
-        outputs = self.model.predict(input_mat)
+        outputs = self.model.predict(input_mat, verbose=0)
         predictions = outputs[0]
         best_words = np.argsort(predictions[0][mask_index])[::-1]
         output_tokens = self.tokenizer.convert_ids_to_tokens(best_words)
