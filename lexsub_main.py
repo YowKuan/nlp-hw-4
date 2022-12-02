@@ -232,8 +232,8 @@ if __name__=="__main__":
     predictor_part_six = PredictorPartSix(predictor, predictor_bert)
 
     for context in read_lexsub_xml(sys.argv[1]):
-        #print(context)  # useful for debugging
-        #prediction = wn_simple_lesk_predictor(context) 
+        #prediction = wn_frequency_predictor(context)
+        #prediction = wn_simple_lesk_predictor(context)
         #prediction = predictor.predict_nearest(context)
         #prediction = predictor_bert.predict(context)
         
