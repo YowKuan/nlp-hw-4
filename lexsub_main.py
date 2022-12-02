@@ -185,7 +185,7 @@ class AllPredictor(object):
         return result.most_common(1)[0][0]
     def predict2(self, context : Context) -> str:
         candidates = get_candidates(context.lemma, context.pos)
-        result = {}
+        result = dict()
         
         result = None
         for candidate in candidates:
