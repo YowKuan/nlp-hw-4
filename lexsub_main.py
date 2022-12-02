@@ -161,10 +161,9 @@ class BertPredictor(object):
     
 class AllPredictor(object):
     
-    def __init__(self): 
-        W2VMODEL_FILENAME = 'GoogleNews-vectors-negative300.bin'
-        self.bert_predictor = BertPredictor()
-        self.word_to_vec_predictor = Word2VecSubst(W2VMODEL_FILENAME)
+    def __init__(self, predictor, predictor_bert): 
+        self.bert_predictor = predictor_bert
+        self.word_to_vec_predictor = predictor
 
     def predict(self, context : Context) -> str:
     
@@ -172,10 +171,10 @@ class AllPredictor(object):
         result = collections.Counter()
         for context in read_lexsub_xml(sys.argv[1]):
             #print(context)  # useful for debugging
-            # prediction1 = wn_simple_lesk_predictor(context) 
-            # result[prediction1]+=1
-            # prediction2 = wn_frequency_predictor(context)
-            # result[prediction2]+=1
+            prediction1 = wn_simple_lesk_predictor(context) 
+            result[prediction1]+=1
+            prediction2 = wn_frequency_predictor(context)
+            result[prediction2]+=1
             prediction3 = self.bert_predictor.predict(context)
             result[prediction3]+=1
             prediction4 = self.word_to_vec_predictor.predict_nearest(context)
@@ -200,8 +199,8 @@ if __name__=="__main__":
     W2VMODEL_FILENAME = 'GoogleNews-vectors-negative300.bin'
     predictor = Word2VecSubst(W2VMODEL_FILENAME)
     
-    #predictor_bert = BertPredictor()
-    all_predictor = AllPredictor()
+    predictor_bert = BertPredictor()
+    all_predictor = AllPredictor(predictor, predictor_bert)
 
     for context in read_lexsub_xml(sys.argv[1]):
         #print(context)  # useful for debugging
