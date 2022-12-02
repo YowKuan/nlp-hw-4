@@ -187,7 +187,6 @@ class AllPredictor(object):
         candidates = get_candidates(context.lemma, context.pos)
         result = dict()
         
-        result = None
         for candidate in candidates:
             try:
                 similarity = self.word_to_vec_predictor.model.similarity(context.lemma, candidate)
