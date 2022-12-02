@@ -190,7 +190,8 @@ class AllPredictor(object):
         for candidate in candidates:
             try:
                 similarity = self.word_to_vec_predictor.model.similarity(context.lemma, candidate)
-                result[candidate] = math.log2(similarity)
+                if similarity > 0:
+                    result[candidate] = math.log2(similarity)
             except KeyError:
                 continue
         sentence = ' '.join(context.left_context) + ' [MASK] ' + ' '.join(context.right_context)
