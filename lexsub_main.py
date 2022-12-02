@@ -53,8 +53,9 @@ def wn_frequency_predictor(context : Context) -> str:
         synset = l.synset()
         target_lemmas = synset.lemmas() 
         for target in target_lemmas:
-            if target.name() != context.lemma: 
-                target_name = target.name().replace('_', ' ')
+            target_name = target.name().replace('_', ' ')
+            if target_name != context.lemma: 
+               
                 counter[target_name] += target.count()
     return counter.most_common(1)[0][0]
 
@@ -62,12 +63,11 @@ def wn_simple_lesk_predictor(context : Context) -> str:
     stop_words = set(stopwords.words('english'))
     
     all_lemmas = wn.lemmas(context.lemma, pos=context.pos)
-    counter = collections.Counter()
     
-    #the Lemma objects are really lexemes = pairs of word and sense. 
-    #The count method on that object returns how often that lexeme appeared in the semcor corpus. 
-    max_intersection = 0
-    final_synset = None
+    # the Lemma objects are really lexemes = pairs of word and sense. 
+    # The count method on that object returns how often that lexeme appeared in the semcor corpus. 
+    final_score = collections.Counter()
+    
     for l in all_lemmas:
         synset = l.synset()
         definition_set = set(tokenize(synset.definition()))
@@ -82,7 +82,9 @@ def wn_simple_lesk_predictor(context : Context) -> str:
             for example in hypernym.examples():
                 definition_set.update(set(tokenize(example)))
             definition_set.update(set(tokenize(hypernym.definition())))
+            
         def_set_wo_stopword = set()
+        
         #remove stopwords
         for ele in definition_set:
             if ele not in stop_words:
@@ -90,35 +92,25 @@ def wn_simple_lesk_predictor(context : Context) -> str:
                 
         #compute intersection
         #To do: tokenize left/right context?
-        print("left context", context.left_context)
-        intersection_left = def_set_wo_stopword.intersection(set(context.left_context))
-        intersection_right = def_set_wo_stopword.intersection(set(context.right_context))
-        total_intersection = len(intersection_left) + len(intersection_right)
-        print(total_intersection)
+        context_all = context.left_context + context.right_context
+        processed_context =  tokenize(' '.join(context_all))
+        total_intersection = len(def_set_wo_stopword.intersection(set(processed_context)))
         
         #computing part b
         b = 0
         target_lemmas = synset.lemmas()
+        #print(target_lemmas)
         for lemma in target_lemmas:
-            if lemma.name() == context.lemma:
+            lemma_name = lemma.name().replace('_', ' ')
+            if lemma_name == context.lemma:
                 b += lemma.count()
-        
-        if total_intersection > max_intersection:
-            max_intersection = total_intersection
-            final_synset = synset
-    print("final_synset", final_synset)
-    max_count = 0
-    result = None
-    final_lemmas = final_synset.lemmas()
-    
-    for lemma in final_lemmas:
-        count = lemma.count()
-        if count > max_count:
-            max_count = count
-            result = lemma
             
-        
-    return result #replace for part 3        
+        for lemma in target_lemmas:
+            final_score[(synset, lemma.name())] =  total_intersection * 100000 + b * 1000 + lemma.count()
+
+    for candidate in final_score.most_common():
+        if candidate[0][1] != context.lemma:
+            return candidate[0][1]     
    
 
 class Word2VecSubst(object):
@@ -149,16 +141,56 @@ class BertPredictor(object):
 
     def predict(self, context : Context) -> str:
         candidates = get_candidates(context.lemma, context.pos)
-        sentence = ' '.join(context.left_context) + '[MASK]' + ' '.join(context.right_context)
-        print(sentence)
+        #also need to account for cls
+        #mask_index = len(context.left_context) + 1
+        sentence = ' '.join(context.left_context) + ' [MASK] ' + ' '.join(context.right_context)
         input_toks = self.tokenizer.encode(sentence)
+        decoded = self.tokenizer.convert_ids_to_tokens(input_toks)
+        mask_index = decoded.index('[MASK]')
         input_mat = np.array(input_toks).reshape((1,-1))
         outputs = self.model.predict(input_mat)
         predictions = outputs[0]
-        best_words = np.argsort(predictions[0][5])[::-1]
+        best_words = np.argsort(predictions[0][mask_index])[::-1]
+        output_tokens = self.tokenizer.convert_ids_to_tokens(best_words)
+        for token in output_tokens:
+            if token in set(candidates):
+                return token
 
         
-        return self.tokenizer.convert_ids_to_tokens(best_words[0:1])[0] # replace for part 5
+        return None # replace for part 5
+    
+class AllPredictor(object):
+    
+    def __init__(self): 
+        W2VMODEL_FILENAME = 'GoogleNews-vectors-negative300.bin'
+        self.bert_predictor = BertPredictor()
+        self.word_to_vec_predictor = Word2VecSubst(W2VMODEL_FILENAME)
+
+    def predict(self, context : Context) -> str:
+    
+        
+        result = collections.Counter()
+        for context in read_lexsub_xml(sys.argv[1]):
+            #print(context)  # useful for debugging
+            # prediction1 = wn_simple_lesk_predictor(context) 
+            # result[prediction1]+=1
+            # prediction2 = wn_frequency_predictor(context)
+            # result[prediction2]+=1
+            prediction3 = self.bert_predictor.predict(context)
+            result[prediction3]+=1
+            prediction4 = self.word_to_vec_predictor.predict_nearest(context)
+            result[prediction4]+=1
+        return result.most_common(1)[0][0]
+    def predict2(self, context : Context) -> str:
+        candidates = get_candidates(context.lemma, context.pos)
+        
+        result = None
+        for candidate in candidates:
+            try:
+                similarity = self.model.similarity(context.lemma, candidate)
+            except KeyError:
+                continue
+
 
     
 
@@ -168,12 +200,15 @@ if __name__=="__main__":
     W2VMODEL_FILENAME = 'GoogleNews-vectors-negative300.bin'
     predictor = Word2VecSubst(W2VMODEL_FILENAME)
     
-    predictor_bert = BertPredictor()
+    #predictor_bert = BertPredictor()
+    all_predictor = AllPredictor()
 
     for context in read_lexsub_xml(sys.argv[1]):
         #print(context)  # useful for debugging
-        #prediction = wn_frequency_predictor(context) 
+        #prediction = wn_simple_lesk_predictor(context) 
         #prediction = predictor.predict_nearest(context)
-        prediction = predictor_bert.predict(context)
+        #prediction = predictor_bert.predict(context)
+        prediction = all_predictor.predict(context)
+        
         
         print("{}.{} {} :: {}".format(context.lemma, context.pos, context.cid, prediction))
