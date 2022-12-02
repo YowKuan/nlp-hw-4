@@ -190,7 +190,7 @@ class AllPredictor(object):
         result = None
         for candidate in candidates:
             try:
-                similarity = self.model.similarity(context.lemma, candidate)
+                similarity = self.word_to_vec_predictor.model.similarity(context.lemma, candidate)
                 result[candidate] = math.log2(similarity)
             except KeyError:
                 continue
