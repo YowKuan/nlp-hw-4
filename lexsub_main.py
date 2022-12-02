@@ -175,8 +175,8 @@ class AllPredictor(object):
         result = collections.Counter()
         prediction1 = wn_simple_lesk_predictor(context) 
         result[prediction1]+=1
-        # prediction2 = wn_frequency_predictor(context)
-        # result[prediction2]+=1
+        prediction2 = wn_frequency_predictor(context)
+        result[prediction2]+=1
         prediction3 = self.bert_predictor.predict(context)
         result[prediction3]+=1
         prediction4 = self.word_to_vec_predictor.predict_nearest(context)
@@ -202,10 +202,18 @@ class AllPredictor(object):
         outputs = self.bert_predictor.model.predict(input_mat, verbose=0)
         predictions = outputs[0]
         best_words = np.argsort(predictions[0][mask_index])[::-1]
+        associated_prob = predictions[0][mask_index].sort()[::-1]
         output_tokens = self.bert_predictor.tokenizer.convert_ids_to_tokens(best_words)
-        for token in output_tokens:
+        max_prob = float('-inf')
+        final_result = None
+        for token, prob in zip(output_tokens, associated_prob):
             if token in result:
-                return token
+                result[token] += prob
+                if result[token] > max_prob:
+                    max_prob = result[token]
+                    final_result = token
+                
+        return final_result
         
             
                 
@@ -227,7 +235,7 @@ if __name__=="__main__":
         #prediction = wn_simple_lesk_predictor(context) 
         #prediction = predictor.predict_nearest(context)
         #prediction = predictor_bert.predict(context)
-        prediction = all_predictor.predict(context)
+        prediction = all_predictor.predict2(context)
         
         
         print("{}.{} {} :: {}".format(context.lemma, context.pos, context.cid, prediction))
