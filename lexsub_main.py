@@ -201,7 +201,8 @@ class AllPredictor(object):
         outputs = self.bert_predictor.model.predict(input_mat, verbose=0)
         predictions = outputs[0]
         best_words = np.argsort(predictions[0][mask_index])[::-1]
-        associated_prob = predictions[0][mask_index].sort()[::-1]
+        associated_prob = predictions[0][mask_index].sort()
+        associated_prob = associated_prob[::-1]
         output_tokens = self.bert_predictor.tokenizer.convert_ids_to_tokens(best_words)
         max_prob = float('-inf')
         final_result = None
