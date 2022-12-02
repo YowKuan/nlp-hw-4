@@ -15,6 +15,7 @@ import string
 import gensim
 import transformers 
 import collections
+import math
 
 from typing import List
 
@@ -174,8 +175,8 @@ class AllPredictor(object):
         result = collections.Counter()
         prediction1 = wn_simple_lesk_predictor(context) 
         result[prediction1]+=1
-        prediction2 = wn_frequency_predictor(context)
-        result[prediction2]+=1
+        # prediction2 = wn_frequency_predictor(context)
+        # result[prediction2]+=1
         prediction3 = self.bert_predictor.predict(context)
         result[prediction3]+=1
         prediction4 = self.word_to_vec_predictor.predict_nearest(context)
@@ -184,13 +185,30 @@ class AllPredictor(object):
         return result.most_common(1)[0][0]
     def predict2(self, context : Context) -> str:
         candidates = get_candidates(context.lemma, context.pos)
+        result = {}
         
         result = None
         for candidate in candidates:
             try:
                 similarity = self.model.similarity(context.lemma, candidate)
+                result[candidate] = math.log2(similarity)
             except KeyError:
                 continue
+        sentence = ' '.join(context.left_context) + ' [MASK] ' + ' '.join(context.right_context)
+        input_toks = self.bert_predictor.tokenizer.encode(sentence)
+        decoded = self.bert_predictor.tokenizer.convert_ids_to_tokens(input_toks)
+        mask_index = decoded.index('[MASK]')
+        input_mat = np.array(input_toks).reshape((1,-1))
+        outputs = self.bert_predictor.model.predict(input_mat, verbose=0)
+        predictions = outputs[0]
+        best_words = np.argsort(predictions[0][mask_index])[::-1]
+        output_tokens = self.bert_predictor.tokenizer.convert_ids_to_tokens(best_words)
+        for token in output_tokens:
+            if token in result:
+                return token
+        
+            
+                
 
 
     
