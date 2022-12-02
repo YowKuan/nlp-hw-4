@@ -161,24 +161,25 @@ class BertPredictor(object):
     
 class AllPredictor(object):
     
-    def __init__(self, predictor, predictor_bert): 
-        self.bert_predictor = predictor_bert
-        self.word_to_vec_predictor = predictor
+    def __init__(self, predictor=None, predictor_bert=None): 
+        
+        # self.bert_predictor = predictor_bert
+        # self.word_to_vec_predictor = predictor
+        return
 
     def predict(self, context : Context) -> str:
     
         
         result = collections.Counter()
-        for context in read_lexsub_xml(sys.argv[1]):
-            #print(context)  # useful for debugging
-            prediction1 = wn_simple_lesk_predictor(context) 
-            result[prediction1]+=1
-            prediction2 = wn_frequency_predictor(context)
-            result[prediction2]+=1
-            prediction3 = self.bert_predictor.predict(context)
-            result[prediction3]+=1
-            prediction4 = self.word_to_vec_predictor.predict_nearest(context)
-            result[prediction4]+=1
+        prediction1 = wn_simple_lesk_predictor(context) 
+        result[prediction1]+=1
+        prediction2 = wn_frequency_predictor(context)
+        result[prediction2]+=1
+        prediction3 = self.bert_predictor.predict(context)
+        result[prediction3]+=1
+        prediction4 = self.word_to_vec_predictor.predict_nearest(context)
+        result[prediction4]+=1
+        
         return result.most_common(1)[0][0]
     def predict2(self, context : Context) -> str:
         candidates = get_candidates(context.lemma, context.pos)
